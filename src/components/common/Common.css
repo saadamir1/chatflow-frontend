@@ -1,0 +1,24 @@
+/* Common styles for shared UI elements */
+.realtime-status {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.status-grid {
+  display: flex;
+  gap: 16px;
+}
+.status-item {
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: #e9ecef;
+}
+.status-item.connected {
+  background: #d4edda;
+  color: #155724;
+}
+.status-item.waiting {
+  background: #fff3cd;
+  color: #856404;
+}
