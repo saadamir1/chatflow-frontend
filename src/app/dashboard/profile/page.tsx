@@ -1,5 +1,10 @@
 import UserProfile from '../../../components/profile/UserProfile';
+import AuthGuard from '../../../components/common/AuthGuard';
 
 export default function Profile() {
-  return <UserProfile />;
+  return (
+    <AuthGuard>
+      <UserProfile />
+    </AuthGuard>
+  );
 }

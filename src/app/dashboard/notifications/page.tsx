@@ -1,5 +1,10 @@
 import NotificationCenter from '../../../components/notifications/NotificationCenter';
+import AuthGuard from '../../../components/common/AuthGuard';
 
 export default function Notifications() {
-  return <NotificationCenter />;
+  return (
+    <AuthGuard>
+      <NotificationCenter />
+    </AuthGuard>
+  );
 }
