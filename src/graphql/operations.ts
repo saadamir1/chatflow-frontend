@@ -94,6 +94,10 @@ export const CREATE_NOTIFICATION = gql`
       id
       title
       message
+      type
+      userId
+      read
+      createdAt
     }
   }
 `;
@@ -126,6 +130,12 @@ export const DELETE_NOTIFICATION = gql`
   }
 `;
 
+export const DELETE_NOTIFICATION_MUTATION = gql`
+  mutation DeleteNotification($id: Float!) {
+    removeNotification(id: $id)
+  }
+`;
+
 // Chat operations
 export const CREATE_ROOM = gql`
   mutation CreateRoom($name: String!, $participantIds: [Float!]!) {
@@ -144,12 +154,14 @@ export const SEND_MESSAGE = gql`
       id
       content
       senderId
+      roomId
+      createdAt
       sender {
+        id
         firstName
         lastName
+        email
       }
-      createdAt
-      roomId
     }
   }
 `;
