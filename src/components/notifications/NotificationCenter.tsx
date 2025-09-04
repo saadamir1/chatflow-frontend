@@ -1,43 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useSubscription } from '@apollo/client';
 import { useAuth } from '../../contexts/AuthContext';
+import { 
+  MY_NOTIFICATIONS, 
+  MARK_NOTIFICATION_READ, 
+  DELETE_NOTIFICATION, 
+  NOTIFICATION_SUBSCRIPTION 
+} from '../../graphql/operations';
 
 const NotificationCenter = () => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [filter, setFilter] = useState('all');
+  
+  const { data, loading, error, refetch } = useQuery(MY_NOTIFICATIONS, { 
+    errorPolicy: 'ignore',
+    pollInterval: 30000 // Poll every 30 seconds
+  });
+  
+  const [markAsRead] = useMutation(MARK_NOTIFICATION_READ, { errorPolicy: 'ignore' });
+  const [deleteNotification] = useMutation(DELETE_NOTIFICATION, { errorPolicy: 'ignore' });
+  const { data: newNotification } = useSubscription(NOTIFICATION_SUBSCRIPTION);
 
-  // Mock notifications for demo
-  const mockNotifications = [
-    {
-      id: 1,
-      title: 'Welcome to ChatFlow!',
-      message: 'Your account has been successfully created. Start collaborating with your team.',
-      type: 'welcome',
-      read: false,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      title: 'Workspace Created',
-      message: 'Your default workspace has been set up and is ready to use.',
-      type: 'workspace',
-      read: false,
-      createdAt: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: 3,
-      title: 'System Update',
-      message: 'ChatFlow has been updated with new features and improvements.',
-      type: 'system',
-      read: true,
-      createdAt: new Date(Date.now() - 86400000).toISOString()
+  // Handle new notifications from subscription
+  useEffect(() => {
+    if (newNotification?.notificationAdded) {
+      refetch();
     }
-  ];
+  }, [newNotification, refetch]);
 
-  const [notifications, setNotifications] = useState(mockNotifications);
-
-  if (loading || !user) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -48,28 +41,82 @@ const NotificationCenter = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load notifications</h3>
+          <p className="text-gray-500 mb-4">Please check your connection and try again</p>
+          <button 
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const notifications = data?.myNotifications || [];
   const filteredNotifications = notifications.filter((n: any) => {
     if (filter === 'unread') return !n.read;
     if (filter === 'read') return n.read;
     return true;
   });
 
-  const handleMarkAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await markAsRead({ variables: { id } });
+      refetch();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteNotification({ variables: { id } });
+      refetch();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const unreadNotifications = notifications.filter((n: any) => !n.read);
+    try {
+      await Promise.all(
+        unreadNotifications.map((n: any) => 
+          markAsRead({ variables: { id: n.id } })
+        )
+      );
+      refetch();
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
+      case 'message': return '💬';
       case 'welcome': return '👋';
       case 'workspace': return '🏢';
       case 'system': return '⚙️';
+      case 'admin': return '👑';
       default: return '🔔';
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'message': return 'border-blue-500';
+      case 'welcome': return 'border-green-500';
+      case 'workspace': return 'border-purple-500';
+      case 'system': return 'border-gray-500';
+      case 'admin': return 'border-red-500';
+      default: return 'border-blue-500';
     }
   };
 
@@ -78,8 +125,23 @@ const NotificationCenter = () => {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Notifications</h1>
-          <p className="text-gray-600">Stay updated with your latest activities</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Notifications
+                {user?.role === 'ADMIN' && <span className="text-red-600 text-sm ml-2">👑 Admin</span>}
+              </h1>
+              <p className="text-gray-600">Stay updated with your latest activities</p>
+            </div>
+            {notifications.filter((n: any) => !n.read).length > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              >
+                Mark All Read
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter Tabs */}
@@ -104,7 +166,7 @@ const NotificationCenter = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Unread ({notifications.filter(n => !n.read).length})
+                Unread ({notifications.filter((n: any) => !n.read).length})
               </button>
               <button
                 onClick={() => setFilter('read')}
@@ -114,7 +176,7 @@ const NotificationCenter = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Read ({notifications.filter(n => n.read).length})
+                Read ({notifications.filter((n: any) => n.read).length})
               </button>
             </nav>
           </div>
@@ -135,8 +197,8 @@ const NotificationCenter = () => {
               <div
                 key={notification.id}
                 className={`bg-white rounded-lg shadow-sm border-l-4 ${
-                  notification.read ? 'border-gray-300' : 'border-blue-500'
-                } p-6`}
+                  notification.read ? 'border-gray-300' : getTypeColor(notification.type)
+                } p-6 ${!notification.read ? 'bg-blue-50' : ''}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3 flex-1">
@@ -147,15 +209,24 @@ const NotificationCenter = () => {
                           {notification.title}
                         </h3>
                         {!notification.read && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                         )}
                       </div>
                       <p className="text-gray-600 mb-3">{notification.message}</p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <span>{new Date(notification.createdAt).toLocaleString()}</span>
-                        <span className="px-2 py-1 bg-gray-100 rounded-full text-xs capitalize">
+                        <span className={`px-2 py-1 rounded-full text-xs capitalize ${
+                          notification.type === 'message' ? 'bg-blue-100 text-blue-800' :
+                          notification.type === 'admin' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
                           {notification.type}
                         </span>
+                        {!notification.read && (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                            New
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -180,6 +251,17 @@ const NotificationCenter = () => {
             ))
           )}
         </div>
+
+        {/* Live Notification Indicator */}
+        {newNotification && (
+          <div className="fixed bottom-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg max-w-sm animate-bounce">
+            <h4 className="font-medium flex items-center">
+              <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
+              New Notification!
+            </h4>
+            <p className="text-sm mt-1">{newNotification.notificationAdded.title}</p>
+          </div>
+        )}
       </div>
     </div>
   );
