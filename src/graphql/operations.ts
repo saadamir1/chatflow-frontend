@@ -36,14 +36,7 @@ export const REGISTER_MUTATION = gql`
         lastName: $lastName
       }
     ) {
-      access_token
-      refresh_token
-      user {
-        id
-        email
-        firstName
-        lastName
-      }
+      message
     }
   }
 `;
@@ -65,6 +58,30 @@ export const BOOTSTRAP_ADMIN = gql`
     ) {
       access_token
       refresh_token
+    }
+  }
+`;
+
+// Workspace operations
+export const CREATE_WORKSPACE = gql`
+  mutation CreateWorkspace($name: String!, $description: String) {
+    createWorkspace(createWorkspaceInput: {
+      name: $name
+      description: $description
+    }) {
+      id
+      name
+      slug
+    }
+  }
+`;
+
+export const MY_WORKSPACE = gql`
+  query {
+    myWorkspace {
+      id
+      name
+      slug
     }
   }
 `;

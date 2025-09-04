@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useQuery } from '@apollo/client';
-import { GET_ME } from '../graphql/operations';
+import { useQuery, useMutation } from '@apollo/client';
+import { GET_ME, CREATE_WORKSPACE } from '../graphql/operations';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -27,35 +27,45 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const [createWorkspace] = useMutation(CREATE_WORKSPACE);
 
   useEffect(() => {
-    // Check localStorage only on client side
+    setMounted(true);
     if (typeof window !== 'undefined') {
       setIsLoggedIn(!!localStorage.getItem('access_token'));
     }
   }, []);
 
   const { data: userData, loading, error, refetch } = useQuery(GET_ME, {
-    skip: !isLoggedIn,
-    onCompleted: (data) => {
-      setUser(data.me);
-    },
-    onError: (error) => {
-      console.error('Failed to fetch user data:', error);
-      // If token is invalid, logout
-      if (error.message.includes('Unauthorized')) {
-        logout();
-      }
-    }
+    skip: !isLoggedIn || !mounted,
+    errorPolicy: 'ignore'
   });
 
+  useEffect(() => {
+    if (userData?.me) {
+      setUser(userData.me);
+      // Auto-create workspace
+      createWorkspace({
+        variables: {
+          name: `${userData.me.firstName}'s Workspace`,
+          description: 'Default workspace'
+        }
+      }).catch(() => {});
+    }
+  }, [userData, createWorkspace]);
+
   const login = (tokens: any) => {
+    console.log('Login tokens:', tokens);
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', tokens.access_token);
       localStorage.setItem('refresh_token', tokens.refresh_token);
     }
     setIsLoggedIn(true);
-    refetch();
+    // Delay to ensure token is properly set and page navigation happens
+    setTimeout(() => {
+      refetch();
+    }, 1000);
   };
 
   const logout = () => {
@@ -65,12 +75,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoggedIn(false);
     setUser(null);
+    window.location.href = '/';
   };
 
   const value = {
     isLoggedIn,
     user,
-    loading,
+    loading: loading || !mounted,
     error,
     login,
     logout,

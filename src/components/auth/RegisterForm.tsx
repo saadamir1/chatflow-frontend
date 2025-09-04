@@ -29,9 +29,9 @@ const RegisterForm = () => {
 
   const [registerMutation] = useMutation(REGISTER_MUTATION, {
     onCompleted: (data) => {
-      login(data.register);
       setIsLoading(false);
-      // Redirect to dashboard or show success message
+      alert('Registration successful! Please login.');
+      window.location.href = '/';
     },
     onError: (error) => {
       console.error("Registration error:", error);

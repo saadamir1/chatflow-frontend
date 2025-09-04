@@ -10,8 +10,8 @@ import "./AuthForms.css";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: "admin@gmail.com",
+    password: "123456",
   });
   const [errors, setErrors] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -28,9 +28,13 @@ const LoginForm = () => {
 
   const [loginMutation] = useMutation(LOGIN_MUTATION, {
     onCompleted: (data) => {
+      console.log('Login successful:', data);
       login(data.login);
       setIsLoading(false);
-      router.push("/dashboard");
+      // Redirect after a short delay to ensure token is set
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
     },
     onError: (error) => {
       console.error("Login error:", error);
