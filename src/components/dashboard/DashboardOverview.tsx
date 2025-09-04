@@ -1,37 +1,21 @@
 "use client";
 
 import React from "react";
-import { useQuery, useSubscription } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import Link from "next/link";
-import {
-  MY_NOTIFICATIONS,
-  MY_ROOMS,
-  MESSAGE_SUBSCRIPTION,
-  NOTIFICATION_SUBSCRIPTION,
-  CREATE_WORKSPACE,
-  MY_WORKSPACE,
-} from "../../graphql/operations";
+import { MY_NOTIFICATIONS, MY_ROOMS } from "../../graphql/operations";
 import { useAuth } from "../../contexts/AuthContext";
 import RealtimeStatus from "../common/RealtimeStatus";
 
 const DashboardOverview = () => {
   const { user, logout } = useAuth();
-  // Mock data for demo
-  const unreadNotifications = [
-    {
-      id: 1,
-      title: "Welcome to ChatFlow!",
-      message: "Your account is ready",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      title: "Workspace Created",
-      message: "Default workspace set up",
-      createdAt: new Date().toISOString(),
-    },
-  ];
-  const totalRooms = 3;
+  
+  // Get real data from backend
+  const { data: notificationsData } = useQuery(MY_NOTIFICATIONS, { errorPolicy: 'ignore' });
+  const { data: roomsData } = useQuery(MY_ROOMS, { errorPolicy: 'ignore' });
+  
+  const unreadNotifications = (notificationsData?.myNotifications || []).filter((n: any) => !n.read);
+  const totalRooms = roomsData?.myRooms?.length || 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -76,15 +60,20 @@ const DashboardOverview = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome back, {user?.firstName}! 👋
+            {user?.role === 'ADMIN' && (
+              <span className="text-red-600 text-lg ml-2">👑 Admin</span>
+            )}
           </h2>
           <p className="text-gray-600">
-            Manage your team collaboration and stay connected with real-time
-            messaging.
+            {user?.role === 'ADMIN' 
+              ? 'Manage your team, create channels, and oversee all communications.'
+              : 'Collaborate with your team and stay connected with real-time messaging.'
+            }
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className={`grid grid-cols-1 ${user?.role === 'ADMIN' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 mb-8`}>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -144,6 +133,27 @@ const DashboardOverview = () => {
               </div>
             </div>
           </div>
+
+          {/* Admin-only Stats */}
+          {user?.role === 'ADMIN' && (
+            <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">👑</span>
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-2xl font-bold text-gray-900">Admin</h3>
+                  <p className="text-gray-600">System Control</p>
+                  <Link
+                    href="/admin/users"
+                    className="text-red-600 hover:text-red-700 text-sm font-medium"
+                  >
+                    Manage Users →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content Grid */}
@@ -204,29 +214,32 @@ const DashboardOverview = () => {
               Your Chat Rooms
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { id: 1, name: "General Discussion", participants: 5 },
-                { id: 2, name: "Project Updates", participants: 3 },
-                { id: 3, name: "Team Chat", participants: 8 },
-              ].map((room: any) => (
-                <div
-                  key={room.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                >
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    {room.name}
-                  </h4>
-                  <p className="text-gray-600 text-sm mb-3">
-                    {room.participants} participants
-                  </p>
-                  <Link
-                    href="/dashboard/chat"
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              {totalRooms === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <p className="text-gray-500 mb-4">No chat rooms yet</p>
+                  <Link 
+                    href="/dashboard/chat" 
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Open chat →
+                    Start Your First Chat
                   </Link>
                 </div>
-              ))}
+              ) : (
+                (roomsData?.myRooms || []).slice(0, 6).map((room: any) => (
+                  <div key={room.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                    <h4 className="font-medium text-gray-900 mb-2">{room.name}</h4>
+                    <p className="text-gray-600 text-sm mb-3">
+                      {room.participants?.length || 0} participants
+                    </p>
+                    <Link 
+                      href="/dashboard/chat" 
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      Open chat →
+                    </Link>
+                  </div>
+                ))
+              )}
             </div>
             {totalRooms > 6 && (
               <div className="text-center mt-6">
