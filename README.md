@@ -7,32 +7,32 @@
 ### **🔐 Authentication System**
 - Professional login/register forms with validation
 - JWT token management with refresh tokens
-- Email verification and password reset
+- Admin bootstrap for initial setup
 - Protected routes and authentication guards
 
 ### **💬 Real-Time Chat**
 - Direct messaging between team members
-- Real-time message delivery with WebSocket
-- Chat room creation and management
-- Live typing indicators and presence
+- User-to-user chat interface
+- Real-time message delivery
+- Team member discovery
 
 ### **🔔 Smart Notifications**
-- Real-time notification system
-- Push notifications for messages and updates
-- Notification center with read/unread status
-- Live notification badges
+- Notification center with filtering
+- Read/unread status management
+- Real-time notification updates
+- Interactive notification actions
 
 ### **👤 User Management**
-- User profiles with avatar support
-- Role-based access control
-- Team member invitations
-- Profile customization
+- User profiles with settings tabs
+- Account information display
+- Profile customization options
+- Security settings
 
 ### **📊 Dashboard Analytics**
+- Modern dashboard with live stats
 - Real-time connection status
-- Activity overview and statistics
-- Recent messages and notifications
-- User engagement metrics
+- Activity overview and metrics
+- Responsive design across devices
 
 ## 🛠️ Tech Stack
 
@@ -60,28 +60,14 @@ cd chatflow-frontend
 # Install dependencies
 npm install --legacy-peer-deps
 
-# Set up environment variables
-cp .env.example .env.local
-```
-
-### Environment Variables
-
-```env
-NEXT_PUBLIC_GRAPHQL_URL=http://localhost:3001/graphql
-NEXT_PUBLIC_WS_URL=ws://localhost:3001/graphql
-```
-
-### Development
-
-```bash
 # Start development server
 npm run dev
+```
 
-# Build for production
-npm run build
-
-# Start production server
-npm start
+### Login Credentials
+```
+Email: admin@gmail.com
+Password: 123456
 ```
 
 ## 📱 Application Structure
@@ -93,6 +79,7 @@ src/
 │   │   ├── chat/         # Chat interface
 │   │   ├── notifications/ # Notification center
 │   │   └── profile/      # User profile
+│   ├── admin-bootstrap/  # Admin setup page
 │   ├── register/         # Registration page
 │   └── layout.tsx        # Root layout with providers
 ├── components/            # Reusable components
@@ -100,7 +87,8 @@ src/
 │   ├── chat/             # Chat components
 │   ├── dashboard/        # Dashboard components
 │   ├── notifications/    # Notification components
-│   └── profile/          # Profile components
+│   ├── profile/          # Profile components
+│   └── common/           # Shared components
 ├── contexts/             # React contexts
 │   └── AuthContext.tsx  # Authentication state
 ├── graphql/              # GraphQL operations
@@ -116,18 +104,19 @@ src/
 - **WebSocket**: `ws://localhost:3001/graphql`
 
 ### Key Operations
-- Authentication (login, register, refresh)
-- Real-time messaging and notifications
+- Authentication (login, register, bootstrap admin)
 - User management and profiles
-- Chat room creation and management
+- Real-time messaging
+- Notification management
+- Workspace creation
 
 ## 🎨 UI/UX Features
 
-- **Responsive Design**: Works on desktop, tablet, and mobile
-- **Modern Interface**: Clean, professional ChatFlow branding
-- **Real-time Updates**: Live notifications and message delivery
-- **Loading States**: Proper loading indicators and error handling
-- **Accessibility**: WCAG compliant with keyboard navigation
+- **Modern Design**: Clean ChatFlow branding with gradients
+- **Responsive Layout**: Works on desktop, tablet, and mobile
+- **Real-time Updates**: Live connection status monitoring
+- **Interactive Elements**: Hover effects and smooth transitions
+- **Professional Interface**: Business-ready design system
 
 ## 🔧 Development
 
@@ -141,6 +130,7 @@ src/
 - TypeScript for type safety
 - ESLint + Prettier for code formatting
 - Tailwind CSS for consistent styling
+- Component-based architecture
 
 ## 🚀 Deployment
 
@@ -150,13 +140,10 @@ src/
 vercel --prod
 ```
 
-### Docker
-```bash
-# Build Docker image
-docker build -t chatflow-frontend .
-
-# Run container
-docker run -p 3000:3000 chatflow-frontend
+### Environment Variables for Production
+```env
+NEXT_PUBLIC_GRAPHQL_URL=https://your-backend.com/graphql
+NEXT_PUBLIC_WS_URL=wss://your-backend.com/graphql
 ```
 
 ## 🤝 Contributing
