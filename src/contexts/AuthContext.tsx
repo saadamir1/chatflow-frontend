@@ -1,8 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useQuery, useMutation } from '@apollo/client';
-import { GET_ME, CREATE_WORKSPACE } from '../graphql/operations';
+import { GET_ME } from '../graphql/operations';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -28,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
-  const [createWorkspace] = useMutation(CREATE_WORKSPACE);
+
 
   useEffect(() => {
     setMounted(true);
@@ -37,23 +36,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const { data: userData, loading, error, refetch } = useQuery(GET_ME, {
-    skip: !isLoggedIn || !mounted,
-    errorPolicy: 'ignore'
-  });
+  // Skip GET_ME query for now due to JWT issues
+  const loading = false;
+  const error = null;
+  const refetch = () => {};
 
+  // Set user data from JWT token payload
   useEffect(() => {
-    if (userData?.me) {
-      setUser(userData.me);
-      // Auto-create workspace
-      createWorkspace({
-        variables: {
-          name: `${userData.me.firstName}'s Workspace`,
-          description: 'Default workspace'
+    if (isLoggedIn && !user && typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          // Decode JWT payload (without verification for display purposes)
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUser({
+            id: payload.sub,
+            email: payload.email,
+            firstName: payload.email === 'admin@gmail.com' ? 'Admin' : payload.email.split('@')[0],
+            lastName: 'User',
+            role: payload.role?.toUpperCase() || 'USER'
+          });
+        } catch (e) {
+          console.error('Error decoding token:', e);
         }
-      }).catch(() => {});
+      }
     }
-  }, [userData, createWorkspace]);
+  }, [isLoggedIn, user]);
 
   const login = (tokens: any) => {
     console.log('Login tokens:', tokens);
@@ -62,10 +70,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('refresh_token', tokens.refresh_token);
     }
     setIsLoggedIn(true);
-    // Delay to ensure token is properly set and page navigation happens
-    setTimeout(() => {
-      refetch();
-    }, 1000);
+    
+    // Decode and set user data immediately
+    try {
+      const payload = JSON.parse(atob(tokens.access_token.split('.')[1]));
+      setUser({
+        id: payload.sub,
+        email: payload.email,
+        firstName: payload.email === 'admin@gmail.com' ? 'Admin' : payload.email.split('@')[0],
+        lastName: 'User',
+        role: payload.role?.toUpperCase() || 'USER'
+      });
+    } catch (e) {
+      console.error('Error decoding token:', e);
+    }
   };
 
   const logout = () => {

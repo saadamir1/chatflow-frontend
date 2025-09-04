@@ -62,30 +62,6 @@ export const BOOTSTRAP_ADMIN = gql`
   }
 `;
 
-// Workspace operations
-export const CREATE_WORKSPACE = gql`
-  mutation CreateWorkspace($name: String!, $description: String) {
-    createWorkspace(createWorkspaceInput: {
-      name: $name
-      description: $description
-    }) {
-      id
-      name
-      slug
-    }
-  }
-`;
-
-export const MY_WORKSPACE = gql`
-  query {
-    myWorkspace {
-      id
-      name
-      slug
-    }
-  }
-`;
-
 // User queries
 export const GET_ME = gql`
   query {
