@@ -52,7 +52,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({
             id: payload.sub,
             email: payload.email,
-            firstName: payload.email === 'admin@gmail.com' ? 'Admin' : payload.email.split('@')[0],
+            firstName: payload.email === 'admin@gmail.com' ? 'Admin' : 
+              payload.email === 'Saadamir070@gmail.com' ? 'Saad' :
+              payload.email === 'Saadshk070@gmail.com' ? 'Ahsan' :
+              payload.email.split('@')[0],
             lastName: 'User',
             role: payload.role?.toUpperCase() || 'USER'
           });
@@ -77,7 +80,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser({
         id: payload.sub,
         email: payload.email,
-        firstName: payload.email === 'admin@gmail.com' ? 'Admin' : payload.email.split('@')[0],
+        firstName: payload.email === 'admin@gmail.com' ? 'Admin' : 
+          payload.email === 'Saadamir070@gmail.com' ? 'Saad' :
+          payload.email === 'Saadshk070@gmail.com' ? 'Ahsan' :
+          payload.email.split('@')[0],
         lastName: 'User',
         role: payload.role?.toUpperCase() || 'USER'
       });
