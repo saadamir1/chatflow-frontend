@@ -1,432 +1,475 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useSubscription } from '@apollo/client';
-import { useAuth } from '../../contexts/AuthContext';
-import { 
-  USERS_QUERY, 
-  MY_ROOMS, 
-  ROOM_MESSAGES, 
-  SEND_MESSAGE, 
-  CREATE_ROOM, 
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useSubscription } from "@apollo/client";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  USERS_QUERY,
+  MY_CHANNELS,
+  MY_DIRECT_MESSAGES,
+  ROOM_MESSAGES,
+  SEND_MESSAGE,
+  CREATE_ROOM,
+  CREATE_DIRECT_MESSAGE,
   MESSAGE_SUBSCRIPTION,
-  CREATE_NOTIFICATION 
-} from '../../graphql/operations';
+} from "../../graphql/operations";
 
 const ChatDashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { data: usersData, loading: usersLoading } = useQuery(USERS_QUERY, { errorPolicy: 'ignore' });
-  const { data: roomsData, loading: roomsLoading, refetch: refetchRooms } = useQuery(MY_ROOMS, { errorPolicy: 'ignore' });
-  const { data: newMessage } = useSubscription(MESSAGE_SUBSCRIPTION);
-  
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [chatType, setChatType] = useState<'room' | 'direct'>('room');
-  const [newMessageText, setNewMessageText] = useState('');
-  const [showCreateRoom, setShowCreateRoom] = useState(false);
-  const [newRoomName, setNewRoomName] = useState('');
-  const [unreadCounts, setUnreadCounts] = useState<{[key: string]: number}>({});
+  const [messageText, setMessageText] = useState("");
+  const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [activeTab, setActiveTab] = useState<"channels" | "dms">("channels");
 
-  // Get room messages
-  const { data: messagesData, loading: messagesLoading, refetch: refetchMessages } = useQuery(ROOM_MESSAGES, {
-    variables: { roomId: selectedRoom?.id },
-    skip: !selectedRoom || chatType !== 'room',
-    errorPolicy: 'ignore'
+  // Queries
+  const { data: usersData } = useQuery(USERS_QUERY);
+  const { data: channelsData, refetch: refetchChannels } =
+    useQuery(MY_CHANNELS);
+  const { data: dmsData, refetch: refetchDMs } = useQuery(MY_DIRECT_MESSAGES);
+  const {
+    data: messagesData,
+    refetch: refetchMessages,
+    loading: messagesLoading,
+    error: messagesError,
+  } = useQuery(ROOM_MESSAGES, {
+    variables: {
+      roomId: selectedRoom?.id ? parseFloat(selectedRoom.id) : null,
+    },
+    skip: !selectedRoom,
+    pollInterval: 2000, // Poll every 2 seconds
+    fetchPolicy: "cache-and-network",
   });
 
-  const [sendMessage] = useMutation(SEND_MESSAGE, { errorPolicy: 'ignore' });
-  const [createRoom] = useMutation(CREATE_ROOM, { errorPolicy: 'ignore' });
-  const [createNotification] = useMutation(CREATE_NOTIFICATION, { errorPolicy: 'ignore' });
+  // Mutations
+  const [sendMessage] = useMutation(SEND_MESSAGE);
+  const [createRoom] = useMutation(CREATE_ROOM);
+  const [createDirectMessage] = useMutation(CREATE_DIRECT_MESSAGE);
 
-  // Handle new messages from subscription
+  // Subscription
+  const { data: newMessage } = useSubscription(MESSAGE_SUBSCRIPTION);
+
+  // Data extraction
+  const users = (usersData?.users || []).filter((u: any) => u.id !== user?.id);
+  const channels = channelsData?.myChannels || [];
+  const directMessages = dmsData?.myDirectMessages || [];
+  const messages = messagesData?.roomMessages || [];
+
+  // Handle new messages
   useEffect(() => {
     if (newMessage?.messageAdded) {
-      const msg = newMessage.messageAdded;
-      
-      // If message is for current room, refetch messages
-      if (selectedRoom && msg.roomId === selectedRoom.id) {
-        refetchMessages();
-      } else {
-        // Update unread count for other rooms
-        setUnreadCounts(prev => ({
-          ...prev,
-          [`room_${msg.roomId}`]: (prev[`room_${msg.roomId}`] || 0) + 1
-        }));
-      }
-
-      // Create notification for message recipient
-      if (msg.senderId !== user?.id) {
-        createNotification({
-          variables: {
-            title: 'New Message',
-            message: `${msg.sender?.firstName}: ${msg.content}`,
-            type: 'message',
-            userId: user?.id
-          }
-        }).catch(() => {});
-      }
+      console.log("New message received:", newMessage.messageAdded);
+      refetchMessages();
     }
-  }, [newMessage, selectedRoom, refetchMessages, user?.id, createNotification]);
+  }, [newMessage, refetchMessages]);
 
-  if (authLoading || usersLoading || roomsLoading) {
+  // Debug messages data
+  useEffect(() => {
+    console.log("Selected room:", selectedRoom);
+    console.log("Messages data:", messagesData);
+    console.log("Messages:", messages);
+    console.log("Messages loading:", messagesLoading);
+    console.log("Messages error:", messagesError);
+  }, [selectedRoom, messagesData, messages, messagesLoading, messagesError]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const messagesContainer = document.getElementById("messages-container");
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }, [messages]);
+
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">Loading chat...</p>
-        </div>
+      <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-800">
+        Loading...
       </div>
     );
   }
 
-  const users = (usersData?.users || []).filter((u: any) => u.id !== user?.id);
-  const rooms = roomsData?.myRooms || [];
-  const messages = messagesData?.roomMessages || [];
-
-  // Use only real rooms from database
-  const allChannels = rooms.map(room => ({
-    ...room,
-    name: `# ${room.name}`,
-    description: `${room.name} discussion room`,
-    type: 'public'
-  }));
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessageText.trim() || !selectedRoom) return;
+    if (!messageText.trim() || !selectedRoom) return;
 
     try {
-      const result = await sendMessage({
+      await sendMessage({
         variables: {
-          content: newMessageText.trim(),
-          roomId: selectedRoom.id
-        }
+          sendMessageInput: {
+            content: messageText.trim(),
+            roomId: parseFloat(selectedRoom.id),
+          },
+        },
       });
-      
-      console.log('Message sent:', result);
-      setNewMessageText('');
-      
-      // Immediately refetch messages to show the new message
-      await refetchMessages();
-      
-      // Clear unread count for current room
-      setUnreadCounts(prev => ({
-        ...prev,
-        [`room_${selectedRoom.id}`]: 0
-      }));
+      setMessageText("");
+      // Immediately refetch to show the new message
+      setTimeout(() => refetchMessages(), 100);
     } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+      console.error("Error sending message:", error);
     }
   };
 
   const handleSelectRoom = (room: any) => {
-    console.log('Selecting room:', room);
     setSelectedRoom(room);
-    setSelectedUser(null);
-    setChatType('room');
-    // Clear unread count
-    setUnreadCounts(prev => ({
-      ...prev,
-      [`room_${room.id}`]: 0
-    }));
   };
 
-  const handleSelectUser = async (selectedUser: any) => {
+  const handleStartDM = async (otherUser: any) => {
     try {
-      const result = await createRoom({
-        variables: {
-          name: `dm-${user?.id}-${selectedUser.id}`,
-          participantIds: [user?.id, selectedUser.id]
-        }
+      const result = await createDirectMessage({
+        variables: { otherUserId: parseFloat(otherUser.id) },
       });
-      
-      if (result.data?.createRoom) {
-        setSelectedRoom(result.data.createRoom);
-        setSelectedUser(selectedUser);
-        setChatType('direct');
+      if (result.data?.createDirectMessage) {
+        setSelectedRoom(result.data.createDirectMessage);
+        refetchDMs();
       }
     } catch (error) {
-      console.error('Error creating DM room:', error);
+      console.error("Error creating DM:", error);
     }
   };
 
-  const handleCreateRoom = async () => {
-    if (!newRoomName.trim()) return;
-    
+  const handleCreateChannel = async () => {
+    if (!newChannelName.trim()) return;
     try {
       await createRoom({
         variables: {
-          name: newRoomName,
-          participantIds: [user?.id]
-        }
+          createRoomInput: {
+            name: newChannelName,
+            participantIds: [parseFloat(user?.id)],
+          },
+        },
       });
-      setNewRoomName('');
-      setShowCreateRoom(false);
-      refetchRooms();
+      setNewChannelName("");
+      setShowCreateChannel(false);
+      refetchChannels();
     } catch (error) {
-      console.error('Error creating room:', error);
+      console.error("Error creating channel:", error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            ChatFlow Team {user?.role === 'ADMIN' && <span className="text-red-600 text-sm">(Admin)</span>}
-          </h1>
-          <p className="text-gray-600">Professional team collaboration platform</p>
+    <div className="h-screen bg-white flex font-sans">
+      {/* Sidebar */}
+      <div className="w-80 bg-slate-800 text-white flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-700">
+          <h1 className="text-xl font-bold text-white">ChatFlow</h1>
+          <p className="text-sm text-slate-300">
+            {user?.firstName} {user?.lastName}
+          </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden" style={{ height: '700px' }}>
-          <div className="flex h-full">
-            {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-gray-50 flex flex-col">
-              {/* Channels Section */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900">Channels</h3>
-                  {user?.role === 'ADMIN' && (
-                    <button
-                      onClick={() => setShowCreateRoom(true)}
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                      + Create
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {allChannels.map((room: any) => (
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-slate-700">
+          <button
+            onClick={() => setActiveTab("channels")}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === "channels"
+                ? "bg-slate-700 text-white"
+                : "text-slate-300 hover:text-white hover:bg-slate-700"
+            }`}
+          >
+            Channels
+          </button>
+          <button
+            onClick={() => setActiveTab("dms")}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === "dms"
+                ? "bg-slate-700 text-white"
+                : "text-slate-300 hover:text-white hover:bg-slate-700"
+            }`}
+          >
+            Direct Messages
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === "channels" ? (
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                  Channels
+                </h3>
+                <button
+                  onClick={() => setShowCreateChannel(true)}
+                  className="text-slate-400 hover:text-white text-lg transition-colors"
+                  title="Create Channel"
+                >
+                  +
+                </button>
+              </div>
+              <div className="space-y-1">
+                {channels.map((channel: any) => (
+                  <div
+                    key={channel.id}
+                    onClick={() => handleSelectRoom(channel)}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedRoom?.id === channel.id
+                        ? "bg-blue-600 text-white"
+                        : "hover:bg-slate-700 text-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2 text-slate-400">#</span>
+                      <span className="text-sm font-medium">
+                        {channel.name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {channels.length === 0 && (
+                  <p className="text-sm text-slate-400 text-center py-4">
+                    No channels yet
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">
+                Direct Messages
+              </h3>
+              <div className="space-y-1">
+                {directMessages.map((dm: any) => {
+                  const otherUser = dm.participants?.find(
+                    (p: any) => p.id !== user?.id
+                  );
+                  return (
                     <div
-                      key={room.id}
-                      onClick={() => handleSelectRoom(room)}
-                      className={`p-2 rounded cursor-pointer hover:bg-gray-100 ${
-                        selectedRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                      key={dm.id}
+                      onClick={() => handleSelectRoom(dm)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedRoom?.id === dm.id
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-slate-700 text-slate-200"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-gray-900 flex items-center">
-                            {room.name}
-                            {room.type === 'private' && <span className="ml-1 text-orange-500">🔒</span>}
-                            {room.type === 'admin' && <span className="ml-1 text-red-500">👑</span>}
-                          </div>
-                          {room.description && (
-                            <div className="text-xs text-gray-500">{room.description}</div>
-                          )}
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-green-500 rounded-full mr-3 flex items-center justify-center text-white text-sm font-medium">
+                          {otherUser?.firstName?.[0]}
                         </div>
-                        {unreadCounts[`room_${room.id}`] > 0 && (
-                          <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                            {unreadCounts[`room_${room.id}`]}
+                        <span className="text-sm font-medium">
+                          {otherUser?.firstName} {otherUser?.lastName}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="mt-6">
+                  <p className="text-xs text-slate-400 mb-3 uppercase tracking-wide">
+                    Start conversation with:
+                  </p>
+                  {users
+                    .filter(
+                      (u: any) =>
+                        !directMessages.some((dm: any) =>
+                          dm.participants?.some((p: any) => p.id === u.id)
+                        )
+                    )
+                    .map((u: any) => (
+                      <div
+                        key={u.id}
+                        onClick={() => handleStartDM(u)}
+                        className="p-3 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors"
+                      >
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-slate-500 rounded-full mr-3 flex items-center justify-center text-white text-sm font-medium">
+                            {u.firstName?.[0]}
+                          </div>
+                          <span className="text-sm text-slate-300">
+                            {u.firstName} {u.lastName}
                           </span>
-                        )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {selectedRoom ? (
+          <>
+            {/* Chat Header */}
+            <div className="p-4 border-b border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center">
+                {selectedRoom.type === "CHANNEL" ? (
+                  <>
+                    <span className="text-xl mr-2 text-gray-600">#</span>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {selectedRoom.name}
+                    </h2>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 bg-green-500 rounded-full mr-3 flex items-center justify-center text-white font-medium">
+                      {
+                        selectedRoom.participants?.find(
+                          (p: any) => p.id !== user?.id
+                        )?.firstName?.[0]
+                      }
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {
+                        selectedRoom.participants?.find(
+                          (p: any) => p.id !== user?.id
+                        )?.firstName
+                      }{" "}
+                      {
+                        selectedRoom.participants?.find(
+                          (p: any) => p.id !== user?.id
+                        )?.lastName
+                      }
+                    </h2>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div
+              id="messages-container"
+              className="flex-1 overflow-y-auto p-6 bg-gray-50"
+            >
+              {messagesLoading ? (
+                <div className="text-center text-gray-500 mt-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm">Loading messages...</p>
+                </div>
+              ) : messagesError ? (
+                <div className="text-center text-red-500 mt-8">
+                  <div className="text-4xl mb-2">⚠️</div>
+                  <p className="text-lg font-medium">Error loading messages</p>
+                  <p className="text-sm">{messagesError.message}</p>
+                  <button
+                    onClick={() => refetchMessages()}
+                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center text-gray-500 mt-8">
+                  <div className="text-4xl mb-2">💬</div>
+                  <p className="text-lg font-medium text-gray-700">
+                    No messages yet
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Start the conversation!
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Room ID: {selectedRoom?.id}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message: any) => (
+                    <div
+                      key={message.id}
+                      className="flex items-start space-x-3"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                        {message.sender?.firstName?.[0] || "U"}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-semibold text-gray-900">
+                            {message.sender?.firstName || "Unknown"}{" "}
+                            {message.sender?.lastName || "User"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(message.createdAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className="bg-white rounded-lg px-4 py-2 shadow-sm border border-gray-100 inline-block max-w-2xl">
+                          <p className="text-gray-900">{message.content}</p>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Direct Messages Section */}
-              <div className="p-4 flex-1">
-                <h3 className="font-semibold text-gray-900 mb-3">Direct Messages</h3>
-                <div className="space-y-1">
-                  {users.length === 0 ? (
-                    <div className="text-sm text-gray-500">No other users found</div>
-                  ) : (
-                    users.map((u: any) => (
-                      <div
-                        key={u.id}
-                        onClick={() => handleSelectUser(u)}
-                        className={`p-2 rounded cursor-pointer hover:bg-gray-100 ${
-                          selectedUser?.id === u.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-medium">
-                              {u.firstName?.[0]}{u.lastName?.[0]}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 text-sm">
-                              {u.firstName} {u.lastName}
-                              {u.role === 'admin' && <span className="ml-1 text-red-500 text-xs">👑</span>}
-                            </div>
-                            <div className="text-xs text-gray-500">{u.email}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Chat Area */}
-            <div className="flex-1 flex flex-col">
-              {selectedRoom || selectedUser ? (
-                <>
-                  {/* Chat Header */}
-                  <div className="p-4 border-b border-gray-200 bg-white">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        {selectedRoom ? (
-                          <>
-                            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                              <span className="text-white font-bold">#</span>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{selectedRoom.name}</h3>
-                              <p className="text-sm text-gray-500">
-                                {selectedRoom.description || 'Team channel'}
-                              </p>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-sm font-medium">
-                                {selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}
-                              </span>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-gray-900">
-                                {selectedUser.firstName} {selectedUser.lastName}
-                              </h3>
-                              <p className="text-sm text-gray-500">Direct Message</p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {selectedRoom && `${messages.length} messages`}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {messagesLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                        <p className="text-gray-500">Loading messages...</p>
-                      </div>
-                    ) : messages.length === 0 ? (
-                      <div className="text-center text-gray-500 py-8">
-                        {selectedRoom 
-                          ? `Start the conversation in ${selectedRoom.name}`
-                          : `Start your conversation with ${selectedUser?.firstName}`
-                        }
-                      </div>
-                    ) : (
-                      messages.map((message: any) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className="flex items-start space-x-2 max-w-xs lg:max-w-md">
-                            {message.senderId !== user?.id && (
-                              <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-white text-xs font-medium">
-                                  {message.sender?.firstName?.[0]}{message.sender?.lastName?.[0]}
-                                </span>
-                              </div>
-                            )}
-                            <div
-                              className={`px-4 py-2 rounded-lg ${
-                                message.senderId === user?.id
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-200 text-gray-900'
-                              }`}
-                            >
-                              {message.senderId !== user?.id && (
-                                <div className="text-xs font-medium mb-1">
-                                  {message.sender?.firstName} {message.sender?.lastName}
-                                </div>
-                              )}
-                              <p>{message.content}</p>
-                              <p className={`text-xs mt-1 ${
-                                message.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
-                              }`}>
-                                {new Date(message.createdAt).toLocaleTimeString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Message Input */}
-                  <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white">
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={newMessageText}
-                        onChange={(e) => setNewMessageText(e.target.value)}
-                        placeholder={`Message ${selectedRoom ? selectedRoom.name : selectedUser?.firstName}...`}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!newMessageText.trim()}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Send
-                      </button>
-                    </div>
-                  </form>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">💬</div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to ChatFlow</h3>
-                    <p className="text-gray-500 mb-4">Select a channel to start collaborating</p>
-                    <div className="text-sm text-gray-400 space-y-1">
-                      <p>• Join channels to collaborate with your team</p>
-                      <p>• Messages are permanently saved in database</p>
-                      <p>• Real-time notifications for new messages</p>
-                      {user?.role === 'ADMIN' && <p>• Admin privileges: Create channels & manage users</p>}
-                    </div>
-                  </div>
-                </div>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Create Room Modal */}
-        {showCreateRoom && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96">
-              <h3 className="text-lg font-semibold mb-4">Create New Channel</h3>
-              <input
-                type="text"
-                value={newRoomName}
-                onChange={(e) => setNewRoomName(e.target.value)}
-                placeholder="Channel name (e.g., marketing-team)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-              />
-              <div className="flex space-x-2">
+            {/* Message Input */}
+            <form
+              onSubmit={handleSendMessage}
+              className="p-4 border-t border-gray-200 bg-white"
+            >
+              <div className="flex space-x-3">
+                <input
+                  type="text"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder={`Message ${
+                    selectedRoom.type === "CHANNEL"
+                      ? "#" + selectedRoom.name
+                      : selectedRoom.participants?.find(
+                          (p: any) => p.id !== user?.id
+                        )?.firstName
+                  }...`}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                />
                 <button
-                  onClick={handleCreateRoom}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                  type="submit"
+                  disabled={!messageText.trim()}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                 >
-                  Create Channel
-                </button>
-                <button
-                  onClick={() => setShowCreateRoom(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
-                >
-                  Cancel
+                  Send
                 </button>
               </div>
+            </form>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <div className="text-6xl mb-4">💬</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Welcome to ChatFlow
+              </h3>
+              <p className="text-gray-600">
+                Select a channel or start a direct message to begin chatting
+              </p>
             </div>
           </div>
         )}
       </div>
+
+      {/* Create Channel Modal */}
+      {showCreateChannel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900">
+              Create New Channel
+            </h3>
+            <input
+              type="text"
+              value={newChannelName}
+              onChange={(e) => setNewChannelName(e.target.value)}
+              placeholder="Channel name (e.g., general, marketing)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-gray-900 placeholder-gray-500"
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={handleCreateChannel}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => setShowCreateChannel(false)}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
