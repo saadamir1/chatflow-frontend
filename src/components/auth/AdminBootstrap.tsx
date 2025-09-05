@@ -94,10 +94,12 @@ const AdminBootstrap = () => {
 
     bootstrapAdmin({
       variables: {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email,
-        password: formData.password
+        bootstrapInput: {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email,
+          password: formData.password
+        }
       }
     });
   };

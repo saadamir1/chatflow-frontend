@@ -86,8 +86,10 @@ const LoginForm = () => {
 
     loginMutation({
       variables: {
-        email: formData.email,
-        password: formData.password,
+        loginInput: {
+          email: formData.email,
+          password: formData.password,
+        },
       },
     });
   };

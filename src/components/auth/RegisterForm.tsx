@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
@@ -30,8 +30,8 @@ const RegisterForm = () => {
   const [registerMutation] = useMutation(REGISTER_MUTATION, {
     onCompleted: (data) => {
       setIsLoading(false);
-      alert('Registration successful! Please login.');
-      window.location.href = '/';
+      alert("Registration successful! Please login.");
+      window.location.href = "/";
     },
     onError: (error) => {
       console.error("Registration error:", error);
@@ -95,10 +95,12 @@ const RegisterForm = () => {
 
     registerMutation({
       variables: {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email,
-        password: formData.password,
+        registerInput: {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email,
+          password: formData.password,
+        },
       },
     });
   };
