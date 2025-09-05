@@ -21,10 +21,12 @@ export default function TestNotification() {
     try {
       const result = await createNotification({
         variables: {
-          title: 'Test Notification',
-          message: 'This is a test notification from frontend',
-          type: 'system',
-          userId: 169 // Saadamir's ID
+          createNotificationInput: {
+            title: 'Test Notification',
+            message: 'This is a test notification from frontend',
+            type: 'system',
+            userId: 169 // Saadamir's ID
+          }
         }
       });
       console.log('Test result:', result);

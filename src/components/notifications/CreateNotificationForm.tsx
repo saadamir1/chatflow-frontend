@@ -67,10 +67,12 @@ const CreateNotificationForm = ({ currentUser, onNotificationCreated, onCancel }
 
     createNotification({
       variables: {
-        title: formData.title.trim(),
-        message: formData.message.trim(),
-        type: formData.type,
-        userId: parseInt(currentUser.id)
+        createNotificationInput: {
+          title: formData.title.trim(),
+          message: formData.message.trim(),
+          type: formData.type,
+          userId: parseInt(currentUser.id)
+        }
       }
     });
   };
