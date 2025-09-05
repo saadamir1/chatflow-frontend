@@ -1,20 +1,9 @@
 import { gql } from "@apollo/client";
 
-export const USERS_QUERY = gql`
-  query {
-    users {
-      id
-      firstName
-      lastName
-      email
-    }
-  }
-`;
-
-// Authentication mutations
+// ============= AUTH OPERATIONS =============
 export const LOGIN_MUTATION = gql`
-  mutation Login($email: String!, $password: String!) {
-    login(loginInput: { email: $email, password: $password }) {
+  mutation Login($loginInput: LoginInput!) {
+    login(loginInput: $loginInput) {
       access_token
       refresh_token
     }
@@ -22,47 +11,60 @@ export const LOGIN_MUTATION = gql`
 `;
 
 export const REGISTER_MUTATION = gql`
-  mutation Register(
-    $email: String!
-    $password: String!
-    $firstName: String!
-    $lastName: String!
-  ) {
-    register(
-      registerInput: {
-        email: $email
-        password: $password
-        firstName: $firstName
-        lastName: $lastName
-      }
-    ) {
+  mutation Register($registerInput: CreateUserInput!) {
+    register(registerInput: $registerInput) {
       message
     }
   }
 `;
 
 export const BOOTSTRAP_ADMIN = gql`
-  mutation BootstrapAdmin(
-    $email: String!
-    $password: String!
-    $firstName: String!
-    $lastName: String!
-  ) {
-    bootstrapAdmin(
-      bootstrapInput: {
-        email: $email
-        password: $password
-        firstName: $firstName
-        lastName: $lastName
-      }
-    ) {
+  mutation BootstrapAdmin($bootstrapInput: CreateUserInput!) {
+    bootstrapAdmin(bootstrapInput: $bootstrapInput) {
       access_token
       refresh_token
     }
   }
 `;
 
-// User queries
+export const REFRESH_TOKEN_MUTATION = gql`
+  mutation RefreshToken($refreshTokenInput: RefreshTokenInput!) {
+    refreshToken(refreshTokenInput: $refreshTokenInput) {
+      access_token
+      refresh_token
+    }
+  }
+`;
+
+export const FORGOT_PASSWORD_MUTATION = gql`
+  mutation ForgotPassword($forgotPasswordInput: ForgotPasswordInput!) {
+    forgotPassword(forgotPasswordInput: $forgotPasswordInput) {
+      message
+    }
+  }
+`;
+
+export const RESET_PASSWORD_MUTATION = gql`
+  mutation ResetPassword($resetPasswordInput: ResetPasswordInput!) {
+    resetPassword(resetPasswordInput: $resetPasswordInput) {
+      message
+    }
+  }
+`;
+
+// ============= USER OPERATIONS =============
+export const USERS_QUERY = gql`
+  query {
+    users {
+      id
+      firstName
+      lastName
+      email
+      role
+    }
+  }
+`;
+
 export const GET_ME = gql`
   query {
     me {
@@ -75,88 +77,43 @@ export const GET_ME = gql`
   }
 `;
 
-// Notification operations
-export const CREATE_NOTIFICATION = gql`
-  mutation CreateNotification(
-    $title: String!
-    $message: String!
-    $type: String!
-    $userId: Float!
-  ) {
-    createNotification(
-      createNotificationInput: {
-        title: $title
-        message: $message
-        type: $type
-        userId: $userId
-      }
-    ) {
+export const USER_QUERY = gql`
+  query User($id: ID!) {
+    user(id: $id) {
       id
-      title
-      message
-      type
-      userId
-      read
-      createdAt
+      firstName
+      lastName
+      email
+      role
     }
   }
 `;
 
-export const MY_NOTIFICATIONS = gql`
+export const UPDATE_PROFILE_MUTATION = gql`
+  mutation UpdateProfile($updateProfileInput: UpdateProfileInput!) {
+    updateProfile(updateProfileInput: $updateProfileInput) {
+      id
+      firstName
+      lastName
+      email
+    }
+  }
+`;
+
+export const CHANGE_PASSWORD_MUTATION = gql`
+  mutation ChangePassword($changePasswordInput: ChangePasswordInput!) {
+    changePassword(changePasswordInput: $changePasswordInput)
+  }
+`;
+
+// ============= CHAT OPERATIONS =============
+export const MY_ROOMS = gql`
   query {
-    myNotifications {
-      id
-      title
-      message
-      type
-      read
-      createdAt
-    }
-  }
-`;
-
-export const MARK_NOTIFICATION_READ = gql`
-  mutation MarkNotificationRead($id: Float!) {
-    markNotificationRead(id: $id) {
-      id
-      read
-    }
-  }
-`;
-
-export const DELETE_NOTIFICATION = gql`
-  mutation DeleteNotification($id: Float!) {
-    deleteNotification(id: $id)
-  }
-`;
-
-export const DELETE_NOTIFICATION_MUTATION = gql`
-  mutation DeleteNotification($id: Float!) {
-    removeNotification(id: $id)
-  }
-`;
-
-// Chat operations
-export const CREATE_ROOM = gql`
-  mutation CreateRoom($name: String!, $participantIds: [Float!]!) {
-    createRoom(
-      createRoomInput: { name: $name, participantIds: $participantIds }
-    ) {
+    myRooms {
       id
       name
-    }
-  }
-`;
-
-export const SEND_MESSAGE = gql`
-  mutation SendMessage($content: String!, $roomId: Float!) {
-    sendMessage(sendMessageInput: { content: $content, roomId: $roomId }) {
-      id
-      content
-      senderId
-      roomId
-      createdAt
-      sender {
+      type
+      participants {
         id
         firstName
         lastName
@@ -166,11 +123,28 @@ export const SEND_MESSAGE = gql`
   }
 `;
 
-export const MY_ROOMS = gql`
+export const MY_CHANNELS = gql`
   query {
-    myRooms {
+    myChannels {
       id
       name
+      type
+      participants {
+        id
+        firstName
+        lastName
+        email
+      }
+    }
+  }
+`;
+
+export const MY_DIRECT_MESSAGES = gql`
+  query {
+    myDirectMessages {
+      id
+      name
+      type
       participants {
         id
         firstName
@@ -196,7 +170,186 @@ export const ROOM_MESSAGES = gql`
   }
 `;
 
-// Subscriptions
+export const CREATE_ROOM = gql`
+  mutation CreateRoom($createRoomInput: CreateRoomDto!) {
+    createRoom(createRoomInput: $createRoomInput) {
+      id
+      name
+      type
+    }
+  }
+`;
+
+export const CREATE_DIRECT_MESSAGE = gql`
+  mutation CreateDirectMessage($otherUserId: Float!) {
+    createDirectMessage(otherUserId: $otherUserId) {
+      id
+      name
+      type
+      participants {
+        id
+        firstName
+        lastName
+        email
+      }
+    }
+  }
+`;
+
+export const SEND_MESSAGE = gql`
+  mutation SendMessage($sendMessageInput: SendMessageDto!) {
+    sendMessage(sendMessageInput: $sendMessageInput) {
+      id
+      content
+      senderId
+      roomId
+      createdAt
+      sender {
+        id
+        firstName
+        lastName
+        email
+      }
+    }
+  }
+`;
+
+// ============= NOTIFICATION OPERATIONS =============
+export const MY_NOTIFICATIONS = gql`
+  query {
+    myNotifications {
+      id
+      title
+      message
+      type
+      read
+      createdAt
+    }
+  }
+`;
+
+export const UNREAD_COUNT = gql`
+  query {
+    unreadCount
+  }
+`;
+
+export const CREATE_NOTIFICATION = gql`
+  mutation CreateNotification($createNotificationInput: CreateNotificationDto!) {
+    createNotification(createNotificationInput: $createNotificationInput) {
+      id
+      title
+      message
+      type
+      userId
+      read
+      createdAt
+    }
+  }
+`;
+
+export const MARK_NOTIFICATION_READ = gql`
+  mutation MarkNotificationRead($id: Float!) {
+    markNotificationRead(id: $id) {
+      id
+      read
+    }
+  }
+`;
+
+export const DELETE_NOTIFICATION = gql`
+  mutation DeleteNotification($id: Float!) {
+    deleteNotification(id: $id)
+  }
+`;
+
+// ============= WORKSPACE OPERATIONS =============
+export const CREATE_WORKSPACE = gql`
+  mutation CreateWorkspace($createWorkspaceInput: CreateWorkspaceInput!) {
+    createWorkspace(createWorkspaceInput: $createWorkspaceInput) {
+      id
+      name
+      slug
+      description
+    }
+  }
+`;
+
+export const WORKSPACES_QUERY = gql`
+  query {
+    workspaces {
+      id
+      name
+      slug
+      description
+    }
+  }
+`;
+
+export const WORKSPACE_QUERY = gql`
+  query Workspace($id: Int!) {
+    workspace(id: $id) {
+      id
+      name
+      slug
+      description
+    }
+  }
+`;
+
+export const WORKSPACE_BY_SLUG = gql`
+  query WorkspaceBySlug($slug: String!) {
+    workspaceBySlug(slug: $slug) {
+      id
+      name
+      slug
+      description
+    }
+  }
+`;
+
+export const MY_WORKSPACE = gql`
+  query {
+    myWorkspace {
+      id
+      name
+      slug
+      description
+    }
+  }
+`;
+
+// ============= INVITATION OPERATIONS =============
+export const INVITE_USER = gql`
+  mutation InviteUser($inviteUserInput: InviteUserInput!) {
+    inviteUser(inviteUserInput: $inviteUserInput) {
+      success
+      message
+    }
+  }
+`;
+
+export const ACCEPT_INVITATION = gql`
+  mutation AcceptInvitation($token: String!) {
+    acceptInvitation(token: $token) {
+      success
+      message
+    }
+  }
+`;
+
+export const WORKSPACE_INVITATIONS = gql`
+  query {
+    workspaceInvitations {
+      id
+      email
+      status
+      createdAt
+    }
+  }
+`;
+
+// ============= SUBSCRIPTIONS =============
 export const MESSAGE_SUBSCRIPTION = gql`
   subscription {
     messageAdded {
