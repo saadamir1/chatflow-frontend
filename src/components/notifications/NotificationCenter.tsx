@@ -11,9 +11,11 @@ import {
   APPROVE_JOIN,
   REJECT_JOIN
 } from '../../graphql/operations';
+import { useToast } from '../common/ToastProvider';
 
 const NotificationCenter = () => {
   const { user, loading: authLoading } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [filter, setFilter] = useState('all');
   
   const { data, loading, error, refetch } = useQuery(MY_NOTIFICATIONS, { 
@@ -23,8 +25,8 @@ const NotificationCenter = () => {
   
   const [markAsRead] = useMutation(MARK_NOTIFICATION_READ, { errorPolicy: 'ignore' });
   const [deleteNotification] = useMutation(DELETE_NOTIFICATION, { errorPolicy: 'ignore' });
-  const [approveJoin] = useMutation(APPROVE_JOIN, { errorPolicy: 'all' });
-  const [rejectJoin] = useMutation(REJECT_JOIN, { errorPolicy: 'all' });
+  const [approveJoin] = useMutation(APPROVE_JOIN, { errorPolicy: 'all', onCompleted: () => showSuccess('Join request approved'), onError: () => showError('Failed to approve request') });
+  const [rejectJoin] = useMutation(REJECT_JOIN, { errorPolicy: 'all', onCompleted: () => showSuccess('Join request rejected'), onError: () => showError('Failed to reject request') });
   const { data: newNotification } = useSubscription(NOTIFICATION_SUBSCRIPTION);
 
   // Handle new notifications from subscription
@@ -72,7 +74,7 @@ const NotificationCenter = () => {
 
   const handleMarkAsRead = async (id: number) => {
     try {
-      await markAsRead({ variables: { id } });
+      await markAsRead({ variables: { id: Number(id) } });
       refetch();
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -238,13 +240,13 @@ const NotificationCenter = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    {notification.type === 'CHANNEL_JOIN_REQUEST' && notification.referenceId && (
+                    {notification.type === 'CHANNEL_JOIN_REQUEST' && typeof notification.referenceId === 'number' && (
                       <>
                         <button
                           onClick={async () => {
                             try {
-                              await approveJoin({ variables: { approveJoinInput: { requestId: notification.referenceId } } });
-                              await markAsRead({ variables: { id: notification.id } });
+                              await approveJoin({ variables: { approveJoinInput: { requestId: Number(notification.referenceId) } } });
+                              await markAsRead({ variables: { id: Number(notification.id) } });
                               refetch();
                             } catch (e) { console.error(e); }
                           }}
@@ -255,8 +257,8 @@ const NotificationCenter = () => {
                         <button
                           onClick={async () => {
                             try {
-                              await rejectJoin({ variables: { rejectJoinInput: { requestId: notification.referenceId } } });
-                              await markAsRead({ variables: { id: notification.id } });
+                              await rejectJoin({ variables: { rejectJoinInput: { requestId: Number(notification.referenceId) } } });
+                              await markAsRead({ variables: { id: Number(notification.id) } });
                               refetch();
                             } catch (e) { console.error(e); }
                           }}
