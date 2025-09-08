@@ -129,6 +129,9 @@ export const MY_CHANNELS = gql`
       id
       name
       type
+      adminId
+      isPrivate
+      description
       participants {
         id
         firstName
@@ -145,12 +148,25 @@ export const MY_DIRECT_MESSAGES = gql`
       id
       name
       type
+      adminId
       participants {
         id
         firstName
         lastName
         email
       }
+    }
+  }
+`;
+
+export const DISCOVER_CHANNELS = gql`
+  query {
+    discoverChannels {
+      id
+      name
+      description
+      isPrivate
+      adminId
     }
   }
 `;
@@ -176,6 +192,9 @@ export const CREATE_ROOM = gql`
       id
       name
       type
+      adminId
+      isPrivate
+      description
     }
   }
 `;
@@ -377,5 +396,48 @@ export const NOTIFICATION_SUBSCRIPTION = gql`
       read
       createdAt
     }
+  }
+`;
+
+// ============= CHANNEL JOIN FLOW =============
+export const REQUEST_JOIN = gql`
+  mutation RequestJoin($requestJoinInput: RequestJoinInput!) {
+    requestToJoin(requestJoinInput: $requestJoinInput) {
+      id
+      roomId
+      requesterId
+      status
+      createdAt
+    }
+  }
+`;
+
+export const APPROVE_JOIN = gql`
+  mutation ApproveJoin($approveJoinInput: ApproveJoinInput!) {
+    approveJoin(approveJoinInput: $approveJoinInput) {
+      id
+      roomId
+      requesterId
+      status
+      createdAt
+    }
+  }
+`;
+
+export const REJECT_JOIN = gql`
+  mutation RejectJoin($rejectJoinInput: RejectJoinInput!) {
+    rejectJoin(rejectJoinInput: $rejectJoinInput) {
+      id
+      roomId
+      requesterId
+      status
+      createdAt
+    }
+  }
+`;
+
+export const DELETE_ROOMS = gql`
+  mutation DeleteRooms($deleteRoomsInput: DeleteRoomsInput!) {
+    deleteRooms(deleteRoomsInput: $deleteRoomsInput)
   }
 `;
