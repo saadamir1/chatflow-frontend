@@ -7,7 +7,9 @@ import {
   MY_NOTIFICATIONS, 
   MARK_NOTIFICATION_READ, 
   DELETE_NOTIFICATION, 
-  NOTIFICATION_SUBSCRIPTION 
+  NOTIFICATION_SUBSCRIPTION,
+  APPROVE_JOIN,
+  REJECT_JOIN
 } from '../../graphql/operations';
 
 const NotificationCenter = () => {
@@ -21,6 +23,8 @@ const NotificationCenter = () => {
   
   const [markAsRead] = useMutation(MARK_NOTIFICATION_READ, { errorPolicy: 'ignore' });
   const [deleteNotification] = useMutation(DELETE_NOTIFICATION, { errorPolicy: 'ignore' });
+  const [approveJoin] = useMutation(APPROVE_JOIN, { errorPolicy: 'all' });
+  const [rejectJoin] = useMutation(REJECT_JOIN, { errorPolicy: 'all' });
   const { data: newNotification } = useSubscription(NOTIFICATION_SUBSCRIPTION);
 
   // Handle new notifications from subscription
@@ -105,6 +109,9 @@ const NotificationCenter = () => {
       case 'workspace': return '🏢';
       case 'system': return '⚙️';
       case 'admin': return '👑';
+      case 'CHANNEL_JOIN_REQUEST': return '📥';
+      case 'CHANNEL_JOIN_APPROVED': return '✅';
+      case 'CHANNEL_JOIN_REJECTED': return '❌';
       default: return '🔔';
     }
   };
@@ -231,6 +238,34 @@ const NotificationCenter = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
+                    {notification.type === 'CHANNEL_JOIN_REQUEST' && notification.referenceId && (
+                      <>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await approveJoin({ variables: { approveJoinInput: { requestId: notification.referenceId } } });
+                              await markAsRead({ variables: { id: notification.id } });
+                              refetch();
+                            } catch (e) { console.error(e); }
+                          }}
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await rejectJoin({ variables: { rejectJoinInput: { requestId: notification.referenceId } } });
+                              await markAsRead({ variables: { id: notification.id } });
+                              refetch();
+                            } catch (e) { console.error(e); }
+                          }}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
                     {!notification.read && (
                       <button
                         onClick={() => handleMarkAsRead(notification.id)}
