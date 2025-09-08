@@ -241,6 +241,8 @@ export const MY_NOTIFICATIONS = gql`
       title
       message
       type
+      referenceId
+      referenceType
       read
       createdAt
     }
