@@ -13,7 +13,8 @@ export default function AuthGuard({ children, requireAuth = true }: AuthGuardPro
   const { isLoggedIn, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
+  // Show toast if user is not logged in and redirect to login page
+  useEffect(() => { 
     if (!loading && requireAuth && !isLoggedIn) {
       try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'info', message: 'Please sign in to continue' } })); } catch {}
       router.push('/');
