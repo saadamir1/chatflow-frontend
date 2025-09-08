@@ -16,6 +16,7 @@ import {
   REQUEST_JOIN,
   DELETE_ROOMS,
 } from "../../graphql/operations";
+import { useToast } from "../common/ToastProvider";
 
 const ChatDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +31,7 @@ const ChatDashboard = () => {
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
+  const { showSuccess, showError } = useToast();
 
   // Queries with error handling and loading states
   const { data: usersData, loading: usersLoading } = useQuery(USERS_QUERY, {
@@ -69,26 +71,36 @@ const ChatDashboard = () => {
       setMessageText("");
       setTimeout(() => refetchMessages(), 500);
       messageInputRef.current?.focus();
-    }
+      showSuccess('Message sent');
+    },
+    onError: () => showError('Failed to send message')
   });
   const [createRoom, { loading: creatingRoom }] = useMutation(CREATE_ROOM, {
-    errorPolicy: 'all'
+    errorPolicy: 'all',
+    onCompleted: () => showSuccess('Channel created'),
+    onError: () => showError('Failed to create channel')
   });
   const [createDirectMessage, { loading: creatingDM }] = useMutation(CREATE_DIRECT_MESSAGE, {
-    errorPolicy: 'all'
+    errorPolicy: 'all',
+    onCompleted: () => showSuccess('Conversation created'),
+    onError: () => showError('Failed to start DM')
   });
   const [deleteRooms, { loading: deletingRooms }] = useMutation(DELETE_ROOMS, {
     errorPolicy: 'all',
     onCompleted: async () => {
       setSelectedChannelIds([]);
       await Promise.all([refetchChannels(), refetchDiscover()]);
-    }
+      showSuccess('Channels deleted');
+    },
+    onError: () => showError('Failed to delete channels')
   });
   const [requestJoin, { loading: requestingJoin }] = useMutation(REQUEST_JOIN, {
     errorPolicy: 'all',
     onCompleted: () => {
       refetchDiscover();
-    }
+      showSuccess('Join request sent');
+    },
+    onError: () => showError('Failed to send join request')
   });
 
   // Subscription for real-time messages
@@ -232,7 +244,10 @@ const ChatDashboard = () => {
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
-  const isMyMessage = (message: any) => message.sender?.id === user?.id;
+  const isMyMessage = (message: any) => {
+    const sender = typeof message.senderId !== 'undefined' ? message.senderId : message.sender?.id;
+    return Number(sender) === Number(user?.id);
+  };
 
   const getOtherUser = (room: any) => {
     return room.participants?.find((p: any) => p.id !== user?.id);
@@ -645,12 +660,12 @@ const ChatDashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {messages.map((message: any, index: number) => {
                     const isMine = isMyMessage(message);
                     const prevMessage = index > 0 ? messages[index - 1] : null;
                     const showAvatar = !prevMessage || prevMessage.sender?.id !== message.sender?.id;
-                    const showTimestamp = !prevMessage || 
+                    const showTimestamp = !prevMessage ||
                       (new Date(message.createdAt).getTime() - new Date(prevMessage.createdAt).getTime()) > 300000;
 
                     return (
@@ -672,25 +687,25 @@ const ChatDashboard = () => {
                                 isMine ? "flex-row-reverse space-x-reverse" : "flex-row"
                               }`}>
                                 {!isMine && (
-                                  <span className="text-sm font-medium text-gray-900">
+                                  <span className="text-xs font-medium text-gray-900">
                                     {message.sender?.firstName} {message.sender?.lastName}
                                   </span>
                                 )}
-                                <span className="text-xs text-gray-500">
+                                <span className="text-[10px] text-gray-500">
                                   {formatTime(message.createdAt)}
                                 </span>
                               </div>
                             )}
 
                             <div
-                              className={`px-4 py-2.5 rounded-2xl break-words ${
+                              className={`px-4 py-2 rounded-2xl break-words shadow-sm ${
                                 isMine
                                   ? "bg-blue-600 text-white"
-                                  : "bg-white border border-gray-200 text-gray-900"
+                                  : "bg-gray-100 text-gray-900"
                               } ${showAvatar ? "" : "mt-1"}`}
                               style={{
-                                borderTopLeftRadius: isMine || !showAvatar ? "1rem" : "0.375rem",
-                                borderTopRightRadius: !isMine || !showAvatar ? "1rem" : "0.375rem",
+                                borderTopLeftRadius: isMine || !showAvatar ? "1rem" : "0.5rem",
+                                borderTopRightRadius: !isMine || !showAvatar ? "1rem" : "0.5rem",
                               }}
                             >
                               <p className="text-sm leading-relaxed whitespace-pre-wrap">
