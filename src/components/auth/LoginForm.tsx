@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { LOGIN_MUTATION } from "../../graphql/operations";
 import { useAuth } from "../../contexts/AuthContext";
 import "./AuthForms.css";
+import { useToast } from "../common/ToastProvider";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const LoginForm = () => {
 
   const { login } = useAuth();
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
 
   const getErrorMessage = (error: any) => {
     if (error.graphQLErrors && error.graphQLErrors.length > 0) {
@@ -31,6 +33,7 @@ const LoginForm = () => {
       console.log('Login successful:', data);
       login(data.login);
       setIsLoading(false);
+      showSuccess('Signed in successfully');
       // Redirect after a short delay to ensure token is set
       setTimeout(() => {
         router.push("/dashboard");
@@ -40,6 +43,7 @@ const LoginForm = () => {
       console.error("Login error:", error);
       setErrors({ submit: getErrorMessage(error) });
       setIsLoading(false);
+      showError('Sign in failed');
     },
   });
 

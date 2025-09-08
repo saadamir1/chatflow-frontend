@@ -6,6 +6,7 @@ import Link from "next/link";
 import { REGISTER_MUTATION } from "../../graphql/operations";
 import { useAuth } from "../../contexts/AuthContext";
 import "./AuthForms.css";
+import { useToast } from "../common/ToastProvider";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
+  const { showSuccess, showError } = useToast();
 
   const getErrorMessage = (error: any) => {
     if (error.graphQLErrors && error.graphQLErrors.length > 0) {
@@ -30,13 +32,14 @@ const RegisterForm = () => {
   const [registerMutation] = useMutation(REGISTER_MUTATION, {
     onCompleted: (data) => {
       setIsLoading(false);
-      alert("Registration successful! Please login.");
+      showSuccess("Registration successful! Please login.");
       window.location.href = "/";
     },
     onError: (error) => {
       console.error("Registration error:", error);
       setErrors({ submit: getErrorMessage(error) });
       setIsLoading(false);
+      showError('Registration failed');
     },
   });
 

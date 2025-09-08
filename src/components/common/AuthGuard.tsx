@@ -15,6 +15,7 @@ export default function AuthGuard({ children, requireAuth = true }: AuthGuardPro
 
   useEffect(() => {
     if (!loading && requireAuth && !isLoggedIn) {
+      try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'info', message: 'Please sign in to continue' } })); } catch {}
       router.push('/');
     }
   }, [isLoggedIn, loading, requireAuth, router]);

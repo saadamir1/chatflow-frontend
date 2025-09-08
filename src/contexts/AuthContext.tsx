@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
 import { GET_ME } from '../graphql/operations';
 
 interface AuthContextType {
@@ -99,6 +100,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoggedIn(false);
     setUser(null);
+    try {
+      window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: 'Signed out' } }));
+    } catch {}
     window.location.href = '/';
   };
 
