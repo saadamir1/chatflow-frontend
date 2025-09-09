@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import './Dashboard.css';
+"use client";
 
-const DashboardLayout = () => {
+import React, { useState, ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import "./Dashboard.css";
+
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    router.push("/login");
   };
 
   const toggleSidebar = () => {
@@ -21,12 +29,20 @@ const DashboardLayout = () => {
     setSidebarOpen(false);
   };
 
+  // Helper to set active link
+  const isActive = (href: string, exact: boolean = false): string => {
+    if (exact) {
+      return pathname === href ? "active" : "";
+    }
+    return pathname.startsWith(href) ? "active" : "";
+  };
+
   return (
     <div className="dashboard-layout">
       {/* Header */}
       <header className="dashboard-header">
         <div className="header-left">
-          <button 
+          <button
             className="sidebar-toggle"
             onClick={toggleSidebar}
             aria-label="Toggle sidebar"
@@ -37,7 +53,7 @@ const DashboardLayout = () => {
           </button>
           <h1 className="dashboard-title">Dashboard</h1>
         </div>
-        
+
         <div className="header-right">
           <div className="user-info">
             <span className="user-name">
@@ -45,7 +61,7 @@ const DashboardLayout = () => {
             </span>
             <span className="user-role">{user?.role}</span>
           </div>
-          <button 
+          <button
             className="logout-button"
             onClick={handleLogout}
             title="Logout"
@@ -56,61 +72,58 @@ const DashboardLayout = () => {
       </header>
 
       {/* Sidebar */}
-      <aside className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-overlay" onClick={closeSidebar}></div>
         <nav className="sidebar-nav">
           <div className="nav-section">
             <h3>Main</h3>
-            <NavLink 
-              to="/dashboard" 
-              end
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            <Link
+              href="/dashboard"
+              className={`nav-link ${isActive("/dashboard", true)}`}
               onClick={closeSidebar}
             >
               <span className="nav-icon">🏠</span>
               Overview
-            </NavLink>
+            </Link>
           </div>
 
           <div className="nav-section">
             <h3>Communication</h3>
-            <NavLink 
-              to="/dashboard/chat" 
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            <Link
+              href="/dashboard/chat"
+              className={`nav-link ${isActive("/dashboard/chat")}`}
               onClick={closeSidebar}
             >
               <span className="nav-icon">💬</span>
               Chat
-            </NavLink>
-            <NavLink 
-              to="/dashboard/notifications" 
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            </Link>
+            <Link
+              href="/dashboard/notifications"
+              className={`nav-link ${isActive("/dashboard/notifications")}`}
               onClick={closeSidebar}
             >
               <span className="nav-icon">🔔</span>
               Notifications
-            </NavLink>
+            </Link>
           </div>
 
           <div className="nav-section">
             <h3>Account</h3>
-            <NavLink 
-              to="/dashboard/profile" 
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            <Link
+              href="/dashboard/profile"
+              className={`nav-link ${isActive("/dashboard/profile")}`}
               onClick={closeSidebar}
             >
               <span className="nav-icon">👤</span>
               Profile
-            </NavLink>
+            </Link>
           </div>
         </nav>
       </aside>
 
       {/* Main Content */}
       <main className="dashboard-main">
-        <div className="dashboard-content">
-          <Outlet />
-        </div>
+        <div className="dashboard-content">{children}</div>
       </main>
     </div>
   );
