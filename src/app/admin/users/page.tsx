@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAuth } from "../../../contexts/AuthContext";
 import { USERS_QUERY, CREATE_NOTIFICATION } from "../../../graphql/operations";
-
 import AuthGuard from "../../../components/common/AuthGuard";
 
 function AdminUsersContent() {
@@ -67,8 +66,6 @@ function AdminUsersContent() {
         });
         if (result.data?.createNotification) {
           results.push(result.data.createNotification);
-        } else {
-          console.error("No data returned for user:", userId);
         }
       }
 
@@ -242,22 +239,22 @@ function AdminUsersContent() {
                 value={notificationText}
                 onChange={(e) => setNotificationText(e.target.value)}
                 placeholder="Enter your announcement message..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={4}
               />
-              <div className="flex space-x-2">
+              <div className="flex justify-end space-x-3 mt-4">
+                <button
+                  onClick={() => setShowNotificationModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handleSendNotification}
                   disabled={!notificationText.trim()}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   Send Notification
-                </button>
-                <button
-                  onClick={() => setShowNotificationModal(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
-                >
-                  Cancel
                 </button>
               </div>
             </div>
