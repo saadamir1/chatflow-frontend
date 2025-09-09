@@ -1,18 +1,39 @@
-import React, { useState } from 'react';
-import './Notifications.css';
+import React, { useState, MouseEvent } from "react";
+import "./Notifications.css";
 
-const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
+type NotificationType = "success" | "warning" | "error" | "info";
+
+interface Notification {
+  id: string | number;
+  title: string;
+  message: string;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string | number | Date;
+}
+
+interface NotificationItemProps {
+  notification: Notification;
+  onMarkAsRead: (id: string | number) => void;
+  onDelete: (id: string | number) => void;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onMarkAsRead,
+  onDelete,
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const formatTime = (timestamp) => {
+  const formatTime = (timestamp: string | number | Date): string => {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffInMinutes = (now - date) / (1000 * 60);
+    const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60);
     const diffInHours = diffInMinutes / 60;
     const diffInDays = diffInHours / 24;
 
     if (diffInMinutes < 1) {
-      return 'Just now';
+      return "Just now";
     } else if (diffInMinutes < 60) {
       return `${Math.floor(diffInMinutes)}m ago`;
     } else if (diffInHours < 24) {
@@ -24,45 +45,45 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
     }
   };
 
-  const getTypeIcon = (type) => {
+  const getTypeIcon = (type: NotificationType): string => {
     switch (type) {
-      case 'success':
-        return '✅';
-      case 'warning':
-        return '⚠️';
-      case 'error':
-        return '❌';
-      case 'info':
+      case "success":
+        return "✅";
+      case "warning":
+        return "⚠️";
+      case "error":
+        return "❌";
+      case "info":
       default:
-        return 'ℹ️';
+        return "ℹ️";
     }
   };
 
-  const getTypeColor = (type) => {
+  const getTypeColor = (type: NotificationType): string => {
     switch (type) {
-      case 'success':
-        return '#28a745';
-      case 'warning':
-        return '#ffc107';
-      case 'error':
-        return '#dc3545';
-      case 'info':
+      case "success":
+        return "#28a745";
+      case "warning":
+        return "#ffc107";
+      case "error":
+        return "#dc3545";
+      case "info":
       default:
-        return '#17a2b8';
+        return "#17a2b8";
     }
   };
 
-  const handleToggleRead = (e) => {
+  const handleToggleRead = (e: MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     onMarkAsRead(notification.id);
   };
 
-  const handleDelete = (e) => {
+  const handleDelete = (e: MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     onDelete(notification.id);
   };
 
-  const toggleExpanded = () => {
+  const toggleExpanded = (): void => {
     setIsExpanded(!isExpanded);
     // Mark as read when expanded if it's unread
     if (!isExpanded && !notification.read) {
@@ -71,13 +92,15 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
   };
 
   return (
-    <div 
-      className={`notification-item ${!notification.read ? 'unread' : ''} ${isExpanded ? 'expanded' : ''}`}
+    <div
+      className={`notification-item ${!notification.read ? "unread" : ""} ${
+        isExpanded ? "expanded" : ""
+      }`}
       onClick={toggleExpanded}
     >
       <div className="notification-main">
         <div className="notification-indicator">
-          <span 
+          <span
             className="type-icon"
             style={{ color: getTypeColor(notification.type) }}
           >
@@ -89,16 +112,20 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
         <div className="notification-content">
           <div className="notification-header">
             <h4 className="notification-title">{notification.title}</h4>
-            <span className="notification-time">{formatTime(notification.createdAt)}</span>
+            <span className="notification-time">
+              {formatTime(notification.createdAt)}
+            </span>
           </div>
-          
-          <p className={`notification-message ${isExpanded ? 'expanded' : ''}`}>
+
+          <p className={`notification-message ${isExpanded ? "expanded" : ""}`}>
             {notification.message}
           </p>
 
           {isExpanded && (
             <div className="notification-meta">
-              <span className="notification-type">Type: {notification.type}</span>
+              <span className="notification-type">
+                Type: {notification.type}
+              </span>
               <span className="notification-date">
                 {new Date(notification.createdAt).toLocaleString()}
               </span>
@@ -108,13 +135,13 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 
         <div className="notification-actions">
           <button
-            className={`read-toggle ${notification.read ? 'read' : 'unread'}`}
+            className={`read-toggle ${notification.read ? "read" : "unread"}`}
             onClick={handleToggleRead}
-            title={notification.read ? 'Mark as unread' : 'Mark as read'}
+            title={notification.read ? "Mark as unread" : "Mark as read"}
           >
-            {notification.read ? '📖' : '📧'}
+            {notification.read ? "📖" : "📧"}
           </button>
-          
+
           <button
             className="delete-btn"
             onClick={handleDelete}
@@ -128,7 +155,9 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
       {isExpanded && (
         <div className="notification-details">
           <div className="details-content">
-            <p><strong>Full message:</strong></p>
+            <p>
+              <strong>Full message:</strong>
+            </p>
             <p>{notification.message}</p>
           </div>
         </div>
