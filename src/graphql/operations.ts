@@ -256,7 +256,9 @@ export const UNREAD_COUNT = gql`
 `;
 
 export const CREATE_NOTIFICATION = gql`
-  mutation CreateNotification($createNotificationInput: CreateNotificationDto!) {
+  mutation CreateNotification(
+    $createNotificationInput: CreateNotificationDto!
+  ) {
     createNotification(createNotificationInput: $createNotificationInput) {
       id
       title

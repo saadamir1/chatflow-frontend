@@ -1,32 +1,37 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useQuery, useMutation } from '@apollo/client';
-import { useAuth } from '../../../contexts/AuthContext';
-import { USERS_QUERY, CREATE_NOTIFICATION } from '../../../graphql/operations';
-import TestNotification from '../../../components/common/TestNotification';
+import React, { useState } from "react";
+import { useQuery, useMutation } from "@apollo/client";
+import { useAuth } from "../../../contexts/AuthContext";
+import { USERS_QUERY, CREATE_NOTIFICATION } from "../../../graphql/operations";
 
-import AuthGuard from '../../../components/common/AuthGuard';
+import AuthGuard from "../../../components/common/AuthGuard";
 
 function AdminUsersContent() {
   const { user } = useAuth();
-  const { data, loading, refetch } = useQuery(USERS_QUERY, { errorPolicy: 'ignore' });
-  const [createNotification] = useMutation(CREATE_NOTIFICATION, { 
-    errorPolicy: 'all',
-    fetchPolicy: 'no-cache'
+  const { data, loading, refetch } = useQuery(USERS_QUERY, {
+    errorPolicy: "ignore",
+  });
+  const [createNotification] = useMutation(CREATE_NOTIFICATION, {
+    errorPolicy: "all",
+    fetchPolicy: "no-cache",
   });
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-  const [notificationText, setNotificationText] = useState('');
+  const [notificationText, setNotificationText] = useState("");
   const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   // Redirect if not admin
-  if (user?.role !== 'ADMIN') {
+  if (user?.role !== "ADMIN") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-600 text-6xl mb-4">🚫</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-500">You need admin privileges to access this page</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Access Denied
+          </h3>
+          <p className="text-gray-500">
+            You need admin privileges to access this page
+          </p>
         </div>
       </div>
     );
@@ -47,49 +52,43 @@ function AdminUsersContent() {
 
   const handleSendNotification = async () => {
     if (!notificationText.trim() || selectedUsers.length === 0) return;
-
-    console.log('Sending notifications to users:', selectedUsers);
-    console.log('Notification text:', notificationText);
-
     try {
       const results = [];
       for (const userId of selectedUsers) {
-        console.log('Creating notification for user ID:', userId);
         const result = await createNotification({
           variables: {
-            title: 'Admin Announcement',
-            message: notificationText.trim(),
-            type: 'admin',
-            userId: parseFloat(userId.toString())
-          }
+            createNotificationInput: {
+              title: "Admin Announcement",
+              message: notificationText.trim(),
+              type: "admin",
+              userId: parseFloat(userId.toString()),
+            },
+          },
         });
-        console.log('Full result:', result);
         if (result.data?.createNotification) {
           results.push(result.data.createNotification);
-          console.log('Notification saved:', result.data.createNotification);
         } else {
-          console.error('No data returned for user:', userId);
+          console.error("No data returned for user:", userId);
         }
       }
-      
+
       if (results.length > 0) {
-        setNotificationText('');
+        setNotificationText("");
         setSelectedUsers([]);
         setShowNotificationModal(false);
         alert(`Successfully sent ${results.length} notifications!`);
       } else {
-        alert('No notifications were created. Check console for errors.');
+        alert("No notifications were created. Check console for errors.");
       }
     } catch (error) {
-      console.error('Error sending notifications:', error);
-      alert(`Failed to send notifications: ${error.message || 'Unknown error'}`);
+      alert(`Failed to send notifications: ${error || "Unknown error"}`);
     }
   };
 
   const toggleUserSelection = (userId: number) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
+    setSelectedUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
         : [...prev, userId]
     );
   };
@@ -105,9 +104,6 @@ function AdminUsersContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Debug Component */}
-        <TestNotification />
-        
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -115,7 +111,9 @@ function AdminUsersContent() {
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 👑 Admin - User Management
               </h1>
-              <p className="text-gray-600">Manage users and send announcements</p>
+              <p className="text-gray-600">
+                Manage users and send announcements
+              </p>
             </div>
             <div className="flex space-x-2">
               <button
@@ -168,7 +166,9 @@ function AdminUsersContent() {
               <div
                 key={user.id}
                 className={`p-6 hover:bg-gray-50 cursor-pointer ${
-                  selectedUsers.includes(user.id) ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                  selectedUsers.includes(user.id)
+                    ? "bg-blue-50 border-l-4 border-blue-500"
+                    : ""
                 }`}
                 onClick={(e) => {
                   e.preventDefault();
@@ -188,36 +188,39 @@ function AdminUsersContent() {
                     />
                     <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
                       <span className="text-white font-medium">
-                        {user.firstName?.[0]}{user.lastName?.[0]}
+                        {user.firstName?.[0]}
+                        {user.lastName?.[0]}
                       </span>
                     </div>
                     <div>
                       <h4 className="text-lg font-medium text-gray-900">
                         {user.firstName} {user.lastName}
-                        {user.role === 'admin' && (
-                          <span className="ml-2 text-red-600 text-sm">👑 Admin</span>
+                        {user.role === "admin" && (
+                          <span className="ml-2 text-red-600 text-sm">
+                            👑 Admin
+                          </span>
                         )}
                       </h4>
                       <p className="text-gray-600">{user.email}</p>
                       <div className="flex items-center space-x-2 mt-1">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          user.role === 'admin' 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            user.role === "admin"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
                           {user.role}
                         </span>
-                        <span className="text-xs text-gray-500">ID: {user.id}</span>
+                        <span className="text-xs text-gray-500">
+                          ID: {user.id}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-500">
-                      Registered User
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      Active Account
-                    </div>
+                    <div className="text-sm text-gray-500">Registered User</div>
+                    <div className="text-xs text-gray-400">Active Account</div>
                   </div>
                 </div>
               </div>
@@ -229,7 +232,9 @@ function AdminUsersContent() {
         {showNotificationModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-96 max-w-md">
-              <h3 className="text-lg font-semibold mb-4">Send Admin Notification</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Send Admin Notification
+              </h3>
               <p className="text-sm text-gray-600 mb-4">
                 Sending to {selectedUsers.length} selected user(s)
               </p>
